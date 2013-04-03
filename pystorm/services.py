@@ -69,13 +69,27 @@ class FetchService(threading.Thread):
             mission.connect("resume",  self.resume_missions)
             mission.connect("stop",  self.finish_missions)
             mission.connect("finish",  self.finish_missions)
+            mission.connect("error",  self.on_mission_err)
+
         self.mission_lock.put(missions)    
+
+    def on_mission_err(self, mission,  data):
+        if mission.tryCnt >= mission.maxRetryNum:
+            mission.failed = True
+            mission.emit('finish', obj = mission)
+            return
+
+        with self.sync():
+            mission.tryCnt += 1
+            mission.start()
+
             
     def resume_missions(self, mission, data):        
         mission.connect("pause", self.finish_missions)
         mission.connect("resume",  self.resume_missions)
         mission.connect("stop",  self.finish_missions)
         mission.connect("finish",  self.finish_missions)
+        mission.connect("error",  self.on_mission_err)
         
         with self.sync_lock():
             if len(self.active_mission_list) >= self.concurrent_thread_num:
@@ -113,7 +127,6 @@ class FetchService(threading.Thread):
                 self.start_mission(mission)
         
     def finish_missions(self, mission,  data):        
-        
         with self.sync():
             # Remove mission from active mission list.
             if mission in self.active_mission_list:
