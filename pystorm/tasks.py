@@ -60,7 +60,6 @@ class TaskObject(EventManager):
     def get_output_file(self, output_file):    
         if output_file is not None:
             return output_file
-        
         return self.url.rsplit("/", 1)[1]
     
     def emit_update(self):
@@ -125,6 +124,7 @@ class TaskObject(EventManager):
                 self.emit("error", error_info, self)
                 return
             
+            common.ensure_dir(self.output_file)
             self.__stop = False
             self.__pause = False
             
